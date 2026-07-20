@@ -82,3 +82,22 @@ No GitHub, ative em:
 **Settings > Pages > Deploy from a branch > gh-pages > /root**
 
 Mais detalhes estão no arquivo `INSTRUCOES_GITHUB_PAGES.md`.
+
+## Importação de CSV
+
+A tela **Itens** possui o botão **Importar CSV** e o botão **Baixar modelo CSV**.
+
+Colunas aceitas no CSV:
+
+```csv
+modelo;marca;patrimonio;codigo_barras;categoria;status;quantidade;localizacao;tipo;responsavel_atual;observacoes;fornecedor;data_aquisicao;valor_estimado;garantia_ate
+```
+
+Regras importantes:
+
+- `modelo`, `marca`, `patrimonio`, `codigo_barras`, `categoria` e `localizacao` são obrigatórios.
+- `patrimonio` não pode estar duplicado no sistema nem no próprio CSV.
+- `codigo_barras` não pode estar duplicado no sistema nem no próprio CSV.
+- `marca`, `categoria` e `localizacao` precisam estar cadastradas antes da importação.
+- O separador recomendado é ponto e vírgula `;`, compatível com o padrão brasileiro/Excel.
+- Status aceitos: `disponivel`, `em_uso`, `manutencao`, `descartado`.

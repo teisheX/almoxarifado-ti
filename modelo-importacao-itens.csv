@@ -1,0 +1,3 @@
+modelo;marca;patrimonio;codigo_barras;categoria;status;quantidade;localizacao;tipo;responsavel_atual;observacoes;fornecedor;data_aquisicao;valor_estimado;garantia_ate
+Notebook Latitude 3420;Dell;PAT-0001;789000000001;Notebook;disponivel;1;Almoxarifado TI;Notebook;;Item importado via CSV;Fornecedor Exemplo;2026-06-17;3500.00;2027-06-17
+Monitor 24 Polegadas;LG;PAT-0002;789000000002;Monitor;em_uso;1;Sala de TI;Monitor;João Silva;Monitor em uso no setor administrativo;Fornecedor Exemplo;2026-06-17;900.00;2027-06-17
