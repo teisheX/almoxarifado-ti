@@ -1,10 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Download, Edit, FileText, PlusCircle, Search, Trash2, Upload, FileDown } from 'lucide-react'
+import { Download, Edit, FileText, PlusCircle, Search, Trash2, Upload, FileDown, WalletCards } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { exportCSV, exportPDF } from '../lib/exporters'
 import { buildLookup, downloadCSVTemplate, getCSVValue, normalizeStatus, parseCSV } from '../lib/csvImport'
 import { useAuth } from '../contexts/AuthContext'
+
+function formatCurrency(value) {
+  return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+function itemEstimatedTotal(item) {
+  const unitValue = Number(item.valor_estimado || 0)
+  const quantity = Number(item.quantidade || 1)
+  return unitValue * quantity
+}
 
 export default function Items() {
   const { user, isAdmin, profile } = useAuth()
@@ -15,13 +25,12 @@ export default function Items() {
 
   async function loadItems() {
     setLoading(true)
-    let query = supabase
+    const { data, error } = await supabase
       .from('itens')
       .select('*, categorias(nome), marcas(nome), localizacoes(nome)')
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
 
-    const { data, error } = await query
     if (error) console.error(error)
     setItems(data || [])
     setLoading(false)
@@ -32,7 +41,15 @@ export default function Items() {
   const filteredItems = useMemo(() => {
     const q = filters.q.toLowerCase().trim()
     return items.filter(item => {
-      const textMatch = !q || [item.modelo, item.patrimonio, item.codigo_barras, item.responsavel_atual, item.marcas?.nome].some(v => String(v || '').toLowerCase().includes(q))
+      const textMatch = !q || [
+        item.modelo,
+        item.patrimonio,
+        item.codigo_barras,
+        item.responsavel_atual,
+        item.setor,
+        item.time,
+        item.marcas?.nome
+      ].some(v => String(v || '').toLowerCase().includes(q))
       const statusMatch = !filters.status || item.status === filters.status
       const categoriaMatch = !filters.categoria || item.categorias?.nome === filters.categoria
       const localizacaoMatch = !filters.localizacao || item.localizacoes?.nome === filters.localizacao
@@ -40,10 +57,17 @@ export default function Items() {
     })
   }, [items, filters])
 
+  const totalValorEstimado = useMemo(() => {
+    return filteredItems.reduce((sum, item) => sum + itemEstimatedTotal(item), 0)
+  }, [filteredItems])
+
+  const totalQuantidade = useMemo(() => {
+    return filteredItems.reduce((sum, item) => sum + Number(item.quantidade || 0), 0)
+  }, [filteredItems])
+
   const categorias = [...new Set(items.map(i => i.categorias?.nome).filter(Boolean))]
   const localizacoes = [...new Set(items.map(i => i.localizacoes?.nome).filter(Boolean))]
   const canExport = isAdmin || profile?.supervisor_pode_exportar
-
 
   async function handleImportCSV(event) {
     const file = event.target.files?.[0]
@@ -83,27 +107,25 @@ export default function Items() {
       const errors = []
 
       const payload = rows.map(row => {
-        const modelo = getCSVValue(row, ['modelo'])
+        const modelo = getCSVValue(row, ['modelo', 'nome', 'nome do item'])
         const marcaNome = getCSVValue(row, ['marca'])
         const patrimonio = getCSVValue(row, ['patrimonio', 'número de patrimônio', 'numero de patrimonio'])
         const codigo_barras = getCSVValue(row, ['codigo_barras', 'código de barras', 'codigo de barras'])
         const categoriaNome = getCSVValue(row, ['categoria'])
         const localizacaoNome = getCSVValue(row, ['localizacao', 'localização'])
+        const setor = getCSVValue(row, ['setor'])
+        const time = getCSVValue(row, ['time', 'equipe'])
 
         if (!modelo) errors.push(`Linha ${row.__linha}: modelo é obrigatório.`)
         if (!marcaNome) errors.push(`Linha ${row.__linha}: marca é obrigatória.`)
         if (!patrimonio) errors.push(`Linha ${row.__linha}: patrimônio é obrigatório.`)
-        if (!codigo_barras) errors.push(`Linha ${row.__linha}: código de barras é obrigatório.`)
-        if (!categoriaNome) errors.push(`Linha ${row.__linha}: categoria é obrigatória.`)
-        if (!localizacaoNome) errors.push(`Linha ${row.__linha}: localização é obrigatória.`)
-
         if (patrimonio && patrimonioExistente.has(patrimonio)) errors.push(`Linha ${row.__linha}: patrimônio ${patrimonio} já existe no sistema.`)
         if (codigo_barras && codigoExistente.has(codigo_barras)) errors.push(`Linha ${row.__linha}: código ${codigo_barras} já existe no sistema.`)
         if (patrimonio && patrimonioCSV.has(patrimonio)) errors.push(`Linha ${row.__linha}: patrimônio ${patrimonio} duplicado no próprio CSV.`)
         if (codigo_barras && codigoCSV.has(codigo_barras)) errors.push(`Linha ${row.__linha}: código ${codigo_barras} duplicado no próprio CSV.`)
 
-        patrimonioCSV.add(patrimonio)
-        codigoCSV.add(codigo_barras)
+        if (patrimonio) patrimonioCSV.add(patrimonio)
+        if (codigo_barras) codigoCSV.add(codigo_barras)
 
         const marca_id = marcaMap.get(marcaNome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim())
         const categoria_id = categoriaMap.get(categoriaNome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim())
@@ -116,7 +138,7 @@ export default function Items() {
         const quantidade = Number(getCSVValue(row, ['quantidade']) || 1)
         if (Number.isNaN(quantidade) || quantidade < 0) errors.push(`Linha ${row.__linha}: quantidade inválida.`)
 
-        const valorRaw = getCSVValue(row, ['valor_estimado', 'valor estimado']).replace(',', '.')
+        const valorRaw = getCSVValue(row, ['valor_estimado', 'valor estimado', 'valor estimado unitario']).replace(',', '.')
         const valor_estimado = valorRaw ? Number(valorRaw) : null
         if (valorRaw && Number.isNaN(valor_estimado)) errors.push(`Linha ${row.__linha}: valor estimado inválido.`)
 
@@ -124,9 +146,11 @@ export default function Items() {
           modelo,
           marca_id,
           patrimonio,
-          codigo_barras,
-          categoria_id,
-          localizacao_id,
+          codigo_barras: codigo_barras || null,
+          categoria_id: categoria_id || null,
+          localizacao_id: localizacao_id || null,
+          setor: setor || null,
+          time: time || null,
           status: normalizeStatus(getCSVValue(row, ['status'])),
           quantidade,
           tipo: getCSVValue(row, ['tipo', 'tipo do item']) || null,
@@ -178,12 +202,12 @@ export default function Items() {
   return (
     <section className="page-section">
       <div className="page-header">
-        <div><h1>Itens</h1><p>Consulte, filtre e exporte os itens do almoxarifado.</p></div>
+        <div><h1>Itens</h1><p>Consulte, filtre, importe e exporte os ativos patrimoniais do Grupo 3RN.</p></div>
         <Link className="btn primary" to="/itens/novo"><PlusCircle size={18} /> Novo item</Link>
       </div>
 
       <div className="filters-card">
-        <div className="search-field"><Search size={18} /><input placeholder="Buscar por modelo, marca, patrimônio ou código..." value={filters.q} onChange={e => setFilters({ ...filters, q: e.target.value })} /></div>
+        <div className="search-field"><Search size={18} /><input placeholder="Buscar por modelo, marca, patrimônio, código, setor ou time..." value={filters.q} onChange={e => setFilters({ ...filters, q: e.target.value })} /></div>
         <select value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}>
           <option value="">Todos os status</option>
           <option value="disponivel">Disponível</option>
@@ -199,6 +223,22 @@ export default function Items() {
         </select>
       </div>
 
+      <div className="summary-strip">
+        <div className="summary-card">
+          <span>Itens na pesquisa</span>
+          <strong>{filteredItems.length}</strong>
+        </div>
+        <div className="summary-card">
+          <span>Quantidade total</span>
+          <strong>{totalQuantidade}</strong>
+        </div>
+        <div className="summary-card highlight">
+          <span><WalletCards size={16} /> Valor estimado total</span>
+          <strong>{formatCurrency(totalValorEstimado)}</strong>
+          <small>Soma de quantidade × valor unitário dos itens filtrados.</small>
+        </div>
+      </div>
+
       <div className="export-actions">
         <label className={`btn primary ${importing ? 'disabled' : ''}`}>
           <Upload size={17} /> {importing ? 'Importando...' : 'Importar CSV'}
@@ -211,23 +251,24 @@ export default function Items() {
       </div>
 
       <div className="import-help">
-        <strong>Importação CSV:</strong> use colunas como <code>modelo</code>, <code>marca</code>, <code>patrimonio</code>, <code>codigo_barras</code>, <code>categoria</code>, <code>status</code>, <code>quantidade</code> e <code>localizacao</code>. As marcas, categorias e localizações precisam existir no sistema antes da importação.
+        <strong>Importação CSV:</strong> obrigatórios apenas <code>modelo</code>, <code>marca</code> e <code>patrimonio</code>. Também pode importar <code>setor</code>, <code>time</code> e <code>valor_estimado</code>. As demais colunas são opcionais.
       </div>
 
       <div className="panel">
         {loading ? <p>Carregando...</p> : (
           <div className="responsive-table">
             <table>
-              <thead><tr><th>Modelo</th><th>Marca</th><th>Patrimônio</th><th>Código</th><th>Status</th><th>Localização</th><th>Ações</th></tr></thead>
+              <thead><tr><th>Modelo</th><th>Marca</th><th>Patrimônio</th><th>Setor</th><th>Time</th><th>Status</th><th>Valor estimado</th><th>Ações</th></tr></thead>
               <tbody>
                 {filteredItems.map(item => (
                   <tr key={item.id}>
                     <td data-label="Modelo">{item.modelo}</td>
                     <td data-label="Marca">{item.marcas?.nome}</td>
                     <td data-label="Patrimônio">{item.patrimonio}</td>
-                    <td data-label="Código">{item.codigo_barras}</td>
+                    <td data-label="Setor">{item.setor || '-'}</td>
+                    <td data-label="Time">{item.time || '-'}</td>
                     <td data-label="Status"><span className={`badge ${item.status}`}>{item.status}</span></td>
-                    <td data-label="Localização">{item.localizacoes?.nome}</td>
+                    <td data-label="Valor estimado">{formatCurrency(itemEstimatedTotal(item))}</td>
                     <td data-label="Ações" className="actions-cell">
                       {isAdmin && <Link className="icon-btn" to={`/itens/${item.id}/editar`}><Edit size={16} /></Link>}
                       {isAdmin && <button className="icon-btn danger" onClick={() => softDelete(item)}><Trash2 size={16} /></button>}

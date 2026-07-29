@@ -1,6 +1,6 @@
 # Sistema de Almoxarifado de TI
 
-Sistema web responsivo para gerenciamento de almoxarifado de TI, com React, Vite e Supabase.
+Sistema web responsivo para gerenciamento de gestão patrimonial, com React, Vite e Supabase.
 
 ## Recursos implementados
 
@@ -101,3 +101,41 @@ Regras importantes:
 - `marca`, `categoria` e `localizacao` precisam estar cadastradas antes da importação.
 - O separador recomendado é ponto e vírgula `;`, compatível com o padrão brasileiro/Excel.
 - Status aceitos: `disponivel`, `em_uso`, `manutencao`, `descartado`.
+
+
+## Campos obrigatórios no cadastro de itens
+
+Nesta versão, somente estes campos são obrigatórios:
+
+- Nome do item / Modelo
+- Marca
+- Patrimônio
+
+Código de barras, categoria, status, quantidade, localização e demais campos são opcionais.
+
+Se você já criou o banco no Supabase antes desta alteração, execute também:
+
+```sql
+-- supabase/migration_campos_opcionais_itens.sql
+alter table public.itens alter column codigo_barras drop not null;
+alter table public.itens alter column categoria_id drop not null;
+alter table public.itens alter column localizacao_id drop not null;
+alter table public.itens alter column status set default 'disponivel';
+alter table public.itens alter column quantidade set default 1;
+```
+
+## Atualização: Setor, Time e Totalizador
+
+Esta versão adiciona os campos `setor` e `time` no cadastro de itens, na listagem, na busca global, na importação CSV e na exportação PDF/CSV.
+
+Também foi adicionado um totalizador na tela de Itens com:
+
+- total de itens filtrados;
+- quantidade total filtrada;
+- valor estimado total, calculado por `quantidade x valor_estimado`.
+
+Se o banco já estiver criado no Supabase, execute o arquivo abaixo no SQL Editor:
+
+```sql
+supabase/migration_setor_time_totalizador.sql
+```

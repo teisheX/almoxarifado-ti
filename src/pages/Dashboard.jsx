@@ -36,13 +36,13 @@ export default function Dashboard() {
         <div className="dashboard-hero-copy">
           <span className="eyebrow">Controle corporativo de ativos</span>
           <h1>{isAdmin ? 'Dashboard do Administrador' : 'Dashboard do Supervisor'}</h1>
-          <p>Resumo visual do almoxarifado de TI, com itens, patrimônio, status, relatórios e rastreamento por código de barras.</p>
+          <p>Resumo visual dos ativos patrimoniais do Grupo 3RN, com itens, patrimônio, setores, times, relatórios e rastreamento por código de barras.</p>
           <div className="hero-actions">
             <Link className="btn primary" to="/itens/novo"><PlusCircle size={18} /> Novo item</Link>
             <Link className="btn secondary" to="/itens"><ScanLine size={18} /> Consultar itens</Link>
           </div>
         </div>
-        <img src={heroImage} alt="Sistema profissional de almoxarifado de TI" />
+        <img src={heroImage} alt="Sistema profissional de gestão patrimonial" />
       </div>
 
       <div className="cards-grid">
@@ -54,7 +54,7 @@ export default function Dashboard() {
 
       <div className="feature-image-grid">
         <article className="image-feature-card">
-          <img src={scannerImage} alt="Leitura de código de barras em item de TI" />
+          <img src={scannerImage} alt="Leitura de código de barras em item patrimonial" />
           <div>
             <ScanLine size={22} />
             <h3>Cadastro com código de barras</h3>

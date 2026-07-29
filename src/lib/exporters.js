@@ -30,46 +30,52 @@ export async function exportCSV(items, userId, filtros = {}) {
     marca: item.marcas?.nome || '',
     patrimonio: item.patrimonio,
     codigo_barras: item.codigo_barras,
+    setor: item.setor || '',
+    time: item.time || '',
     categoria: item.categorias?.nome || '',
     status: item.status,
     localizacao: item.localizacoes?.nome || '',
     quantidade: item.quantidade,
     responsavel_atual: item.responsavel_atual || '',
+    valor_estimado_unitario: item.valor_estimado || '',
+    valor_estimado_total: Number(item.valor_estimado || 0) * Number(item.quantidade || 1),
     criado_por: item.criado_por,
     created_at: item.created_at,
     updated_at: item.updated_at
   }))
 
   const csv = Papa.unparse(rows, { delimiter: ';' })
-  downloadBlob('\ufeff' + csv, `itens-almoxarifado-${Date.now()}.csv`, 'text/csv;charset=utf-8;')
+  downloadBlob('\ufeff' + csv, `itens-3rn-ativos-${Date.now()}.csv`, 'text/csv;charset=utf-8;')
   await registerExportLog({ userId, formato: 'csv', tipoExportacao: 'itens', filtrosAplicados: filtros, quantidadeRegistros: items.length })
 }
 
 export async function exportPDF(items, userId, filtros = {}) {
   const doc = new jsPDF({ orientation: 'landscape' })
   doc.setFontSize(16)
-  doc.text('Relatório de Itens - Almoxarifado TI', 14, 14)
+  doc.text('Relatório de Itens - 3RN Ativos', 14, 14)
   doc.setFontSize(9)
   doc.text(`Emitido em: ${new Date().toLocaleString('pt-BR')}`, 14, 21)
+  const totalEstimado = items.reduce((sum, item) => sum + (Number(item.valor_estimado || 0) * Number(item.quantidade || 1)), 0)
+  doc.text(`Valor estimado total: ${totalEstimado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, 14, 27)
 
   autoTable(doc, {
-    startY: 28,
-    head: [['Modelo', 'Marca', 'Patrimônio', 'Código', 'Categoria', 'Status', 'Localização', 'Qtd.', 'Responsável']],
+    startY: 34,
+    head: [['Modelo', 'Marca', 'Patrimônio', 'Setor', 'Time', 'Status', 'Localização', 'Qtd.', 'Valor total']],
     body: items.map((item) => [
       item.modelo,
       item.marcas?.nome || '',
       item.patrimonio,
-      item.codigo_barras,
-      item.categorias?.nome || '',
+      item.setor || '',
+      item.time || '',
       item.status,
       item.localizacoes?.nome || '',
       item.quantidade,
-      item.responsavel_atual || ''
+      (Number(item.valor_estimado || 0) * Number(item.quantidade || 1)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
     ]),
     styles: { fontSize: 8 },
     headStyles: { fillColor: [15, 23, 42] }
   })
 
-  doc.save(`itens-almoxarifado-${Date.now()}.pdf`)
+  doc.save(`itens-3rn-ativos-${Date.now()}.pdf`)
   await registerExportLog({ userId, formato: 'pdf', tipoExportacao: 'itens', filtrosAplicados: filtros, quantidadeRegistros: items.length })
 }

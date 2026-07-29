@@ -7,7 +7,7 @@ import BarcodeScanner from '../components/BarcodeScanner'
 
 const initialForm = {
   modelo: '', marca_id: '', patrimonio: '', codigo_barras: '', categoria_id: '', tipo: '', status: 'disponivel', quantidade: 1,
-  localizacao_id: '', responsavel_atual: '', observacoes: '', data_aquisicao: '', valor_estimado: '', fornecedor: '', garantia_ate: ''
+  localizacao_id: '', setor: '', time: '', responsavel_atual: '', observacoes: '', data_aquisicao: '', valor_estimado: '', fornecedor: '', garantia_ate: ''
 }
 
 export default function ItemForm() {
@@ -31,7 +31,15 @@ export default function ItemForm() {
       setRefs({ categorias: categorias.data || [], marcas: marcas.data || [], localizacoes: localizacoes.data || [] })
       if (editing) {
         const { data } = await supabase.from('itens').select('*').eq('id', id).single()
-        if (data) setForm({ ...initialForm, ...data, data_aquisicao: data.data_aquisicao || '', garantia_ate: data.garantia_ate || '', valor_estimado: data.valor_estimado || '' })
+        if (data) setForm({
+          ...initialForm,
+          ...data,
+          setor: data.setor || '',
+          time: data.time || '',
+          data_aquisicao: data.data_aquisicao || '',
+          garantia_ate: data.garantia_ate || '',
+          valor_estimado: data.valor_estimado || ''
+        })
       }
     }
     load()
@@ -40,11 +48,22 @@ export default function ItemForm() {
   function update(field, value) { setForm(prev => ({ ...prev, [field]: value })) }
 
   async function validateDuplicity() {
-    let query = supabase.from('itens').select('id, patrimonio, codigo_barras').or(`patrimonio.eq.${form.patrimonio},codigo_barras.eq.${form.codigo_barras}`).is('deleted_at', null)
-    const { data } = await query
+    if (!form.modelo.trim()) throw new Error('Nome/modelo do item é obrigatório.')
+    if (!form.marca_id) throw new Error('Marca é obrigatória.')
+    if (!form.patrimonio.trim()) throw new Error('Patrimônio é obrigatório.')
+
+    const filters = [`patrimonio.eq.${form.patrimonio.trim()}`]
+    if (form.codigo_barras.trim()) filters.push(`codigo_barras.eq.${form.codigo_barras.trim()}`)
+
+    const { data } = await supabase
+      .from('itens')
+      .select('id, patrimonio, codigo_barras')
+      .or(filters.join(','))
+      .is('deleted_at', null)
+
     const duplicated = (data || []).find(row => row.id !== id)
-    if (duplicated?.patrimonio === form.patrimonio) throw new Error('Número de patrimônio já cadastrado.')
-    if (duplicated?.codigo_barras === form.codigo_barras) throw new Error('Código de barras já cadastrado.')
+    if (duplicated?.patrimonio === form.patrimonio.trim()) throw new Error('Número de patrimônio já cadastrado.')
+    if (form.codigo_barras.trim() && duplicated?.codigo_barras === form.codigo_barras.trim()) throw new Error('Código de barras já cadastrado.')
   }
 
   async function handleSubmit(e) {
@@ -54,8 +73,15 @@ export default function ItemForm() {
       await validateDuplicity()
       const payload = {
         ...form,
-        quantidade: Number(form.quantidade || 0),
-        valor_estimado: form.valor_estimado ? Number(form.valor_estimado) : null,
+        modelo: form.modelo.trim(),
+        patrimonio: form.patrimonio.trim(),
+        codigo_barras: form.codigo_barras.trim() || null,
+        categoria_id: form.categoria_id || null,
+        localizacao_id: form.localizacao_id || null,
+        setor: form.setor.trim() || null,
+        time: form.time.trim() || null,
+        quantidade: Number(form.quantidade || 1),
+        valor_estimado: form.valor_estimado ? Number(String(form.valor_estimado).replace(',', '.')) : null,
         data_aquisicao: form.data_aquisicao || null,
         garantia_ate: form.garantia_ate || null,
         atualizado_por: user.id
@@ -81,23 +107,25 @@ export default function ItemForm() {
 
   return (
     <section className="page-section">
-      <div className="page-header"><div><h1>{editing ? 'Editar item' : 'Cadastrar item'}</h1><p>Preencha os dados do equipamento ou ativo de TI.</p></div></div>
+      <div className="page-header"><div><h1>{editing ? 'Editar item' : 'Cadastrar item'}</h1><p>Preencha os dados do bem ou ativo patrimonial.</p></div></div>
       <form className="form-grid panel" onSubmit={handleSubmit}>
-        <Input label="Modelo *" value={form.modelo} onChange={v => update('modelo', v)} required />
+        <Input label="Nome do item / Modelo *" value={form.modelo} onChange={v => update('modelo', v)} required />
         <Select label="Marca *" value={form.marca_id} onChange={v => update('marca_id', v)} options={refs.marcas} required />
         <Input label="Patrimônio *" value={form.patrimonio} onChange={v => update('patrimonio', v)} required />
+        <Input label="Setor" value={form.setor} onChange={v => update('setor', v)} placeholder="Ex.: Financeiro, Operações, Administração" />
+        <Input label="Time" value={form.time} onChange={v => update('time', v)} placeholder="Ex.: Suporte, Infraestrutura, Administrativo" />
         <div className="field">
-          <label>Código de barras *</label>
-          <div className="inline-input"><input value={form.codigo_barras} onChange={e => update('codigo_barras', e.target.value)} required /><button type="button" className="btn secondary" onClick={() => setScannerOpen(true)}><Camera size={16} /></button></div>
+          <label>Código de barras</label>
+          <div className="inline-input"><input value={form.codigo_barras} onChange={e => update('codigo_barras', e.target.value)} /><button type="button" className="btn secondary" onClick={() => setScannerOpen(true)}><Camera size={16} /></button></div>
         </div>
-        <Select label="Categoria *" value={form.categoria_id} onChange={v => update('categoria_id', v)} options={refs.categorias} required />
-        <Select label="Localização *" value={form.localizacao_id} onChange={v => update('localizacao_id', v)} options={refs.localizacoes} required />
-        <SelectSimple label="Status *" value={form.status} onChange={v => update('status', v)} options={[['disponivel','Disponível'], ['em_uso','Em uso'], ['manutencao','Manutenção'], ['descartado','Descartado']]} />
+        <Select label="Categoria" value={form.categoria_id} onChange={v => update('categoria_id', v)} options={refs.categorias} />
+        <Select label="Localização" value={form.localizacao_id} onChange={v => update('localizacao_id', v)} options={refs.localizacoes} />
+        <SelectSimple label="Status" value={form.status} onChange={v => update('status', v)} options={[["disponivel","Disponível"], ["em_uso","Em uso"], ["manutencao","Manutenção"], ["descartado","Descartado"]]} />
         <Input label="Tipo do item" value={form.tipo} onChange={v => update('tipo', v)} />
         <Input label="Quantidade" type="number" min="0" value={form.quantidade} onChange={v => update('quantidade', v)} />
         <Input label="Responsável atual" value={form.responsavel_atual} onChange={v => update('responsavel_atual', v)} />
         <Input label="Fornecedor" value={form.fornecedor} onChange={v => update('fornecedor', v)} />
-        <Input label="Valor estimado" type="number" step="0.01" value={form.valor_estimado} onChange={v => update('valor_estimado', v)} />
+        <Input label="Valor estimado unitário" type="number" step="0.01" value={form.valor_estimado} onChange={v => update('valor_estimado', v)} />
         <Input label="Data de aquisição" type="date" value={form.data_aquisicao} onChange={v => update('data_aquisicao', v)} />
         <Input label="Garantia até" type="date" value={form.garantia_ate} onChange={v => update('garantia_ate', v)} />
         <div className="field full"><label>Observações</label><textarea value={form.observacoes || ''} onChange={e => update('observacoes', e.target.value)} /></div>

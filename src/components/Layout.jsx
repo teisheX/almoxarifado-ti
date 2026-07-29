@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { Boxes, ClipboardList, Home, LogOut, Settings, Shield, Users } from 'lucide-react'
+import { ClipboardList, Home, LogOut, Settings, Shield, Users } from 'lucide-react'
+import logo3rn from '../assets/images/grupo-3rn-logo.png'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Layout() {
@@ -14,10 +15,11 @@ export default function Layout() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand">
-          <Boxes size={28} />
+        <div className="brand brand-3rn">
+          <img src={logo3rn} alt="Grupo 3RN" className="brand-logo" />
           <div>
-            <strong>Almoxarifado TI</strong>
+            <strong>3RN Ativos</strong>
+            <small>Gestão Patrimonial do Grupo 3RN</small>
             <span>{profile?.role === 'admin' ? 'Administrador' : 'Supervisor'}</span>
           </div>
         </div>
