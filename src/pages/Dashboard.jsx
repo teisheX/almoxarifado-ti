@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Dashboard() {
-  const { isAdmin } = useAuth()
+  const { isAdmin, isLeitor, profile } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -35,10 +35,10 @@ export default function Dashboard() {
       <div className="dashboard-hero">
         <div className="dashboard-hero-copy">
           <span className="eyebrow">Controle corporativo de ativos</span>
-          <h1>{isAdmin ? 'Dashboard do Administrador' : 'Dashboard do Supervisor'}</h1>
-          <p>Resumo visual dos ativos patrimoniais do Grupo 3RN, com itens, patrimônio, setores, times, relatórios e rastreamento por código de barras.</p>
+          <h1>{isAdmin ? 'Dashboard do Administrador' : isLeitor ? 'Dashboard do Leitor' : 'Dashboard do Supervisor'}</h1>
+          <p>{isLeitor ? 'Consulte os ativos patrimoniais disponíveis para a sua localização vinculada.' : 'Resumo visual dos ativos patrimoniais do Grupo 3RN, com itens, patrimônio, setores, times, relatórios e rastreamento por código de barras.'}</p>
           <div className="hero-actions">
-            <Link className="btn primary" to="/itens/novo"><PlusCircle size={18} /> Novo item</Link>
+            {!isLeitor && <Link className="btn primary" to="/itens/novo"><PlusCircle size={18} /> Novo item</Link>}
             <Link className="btn secondary" to="/itens"><ScanLine size={18} /> Consultar itens</Link>
           </div>
         </div>
@@ -92,8 +92,11 @@ export default function Dashboard() {
         )}
       </div>
 
-      {!isAdmin && (
+      {!isAdmin && !isLeitor && (
         <div className="hint-card"><AlertTriangle size={18} /> Supervisor pode cadastrar e consultar itens. Edição/exclusão são restritas ao administrador.</div>
+      )}
+      {isLeitor && (
+        <div className="hint-card"><AlertTriangle size={18} /> Perfil leitor: você visualiza somente os itens da localização vinculada ao seu usuário. Cadastro, edição, exclusão, importação e exportação são bloqueados.</div>
       )}
     </section>
   )

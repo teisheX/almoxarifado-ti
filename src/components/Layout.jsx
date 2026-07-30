@@ -20,7 +20,7 @@ export default function Layout() {
           <div>
             <strong>3RN Ativos</strong>
             <small>Gestão Patrimonial do Grupo 3RN</small>
-            <span>{profile?.role === 'admin' ? 'Administrador' : 'Supervisor'}</span>
+            <span>{profile?.role === 'admin' ? 'Administrador' : profile?.role === 'supervisor' ? 'Supervisor' : 'Leitor'}</span>
           </div>
         </div>
 

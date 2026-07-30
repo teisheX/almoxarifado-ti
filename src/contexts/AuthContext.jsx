@@ -74,6 +74,8 @@ export function AuthProvider({ children }) {
     loading,
     isAdmin: profile?.role === 'admin',
     isSupervisor: profile?.role === 'supervisor',
+    isLeitor: profile?.role === 'leitor',
+    canCreateItems: ['admin', 'supervisor'].includes(profile?.role),
     login,
     logout,
     refreshProfile: () => session?.user?.id ? loadProfile(session.user.id) : null

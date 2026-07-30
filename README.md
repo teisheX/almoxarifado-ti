@@ -139,3 +139,32 @@ Se o banco já estiver criado no Supabase, execute o arquivo abaixo no SQL Edito
 ```sql
 supabase/migration_setor_time_totalizador.sql
 ```
+
+
+## Campo Número de Série
+
+O cadastro de ativos possui o campo opcional `numero_serie`. Para bancos já criados, execute no Supabase o arquivo `supabase/migration_numero_serie_itens.sql`.
+
+
+## Perfil Leitor por localização
+
+O sistema agora possui o perfil `leitor`.
+
+Regras do leitor:
+
+- Visualiza somente itens vinculados à `localizacao_id` configurada no perfil dele.
+- Não pode cadastrar itens.
+- Não pode editar itens.
+- Não pode excluir itens.
+- Não pode importar CSV.
+- Não pode exportar PDF/CSV.
+- Não acessa gestão de usuários, cadastros ou auditoria.
+
+Para usar em banco já existente, rode no Supabase SQL Editor:
+
+```sql
+-- arquivo incluso no projeto
+-- supabase/migration_perfil_leitor_localizacao.sql
+```
+
+Depois acesse **Gestão de usuários**, altere o usuário para `Leitor` e selecione a **Localização do leitor**.

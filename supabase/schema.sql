@@ -8,7 +8,8 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   nome text not null,
   email text not null unique,
-  role text not null default 'supervisor' check (role in ('admin', 'supervisor')),
+  role text not null default 'supervisor' check (role in ('admin', 'supervisor', 'leitor')),
+  localizacao_id uuid,
   ativo boolean not null default true,
   supervisor_pode_exportar boolean not null default false,
   created_at timestamptz not null default now(),
@@ -38,11 +39,25 @@ create table if not exists public.localizacoes (
   created_at timestamptz not null default now()
 );
 
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'profiles_localizacao_id_fkey'
+      and conrelid = 'public.profiles'::regclass
+  ) then
+    alter table public.profiles
+      add constraint profiles_localizacao_id_fkey
+      foreign key (localizacao_id) references public.localizacoes(id);
+  end if;
+end $$;
+
 create table if not exists public.itens (
   id uuid primary key default gen_random_uuid(),
   modelo text not null,
   marca_id uuid not null references public.marcas(id),
   patrimonio text not null unique,
+  numero_serie text,
   codigo_barras text unique,
   categoria_id uuid references public.categorias(id),
   tipo text,
@@ -157,6 +172,19 @@ as $$
   );
 $$;
 
+create or replace function public.is_leitor_active()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'leitor' and ativo = true
+  );
+$$;
+
 create or replace function public.is_supervisor_active()
 returns boolean
 language sql
@@ -181,7 +209,7 @@ as $$
     select 1 from public.profiles
     where id = auth.uid()
       and ativo = true
-      and (role = 'admin' or supervisor_pode_exportar = true)
+      and (role = 'admin' or (role = 'supervisor' and supervisor_pode_exportar = true))
   );
 $$;
 
@@ -221,7 +249,21 @@ for all using (public.is_admin()) with check (public.is_admin());
 
 -- ITENS
 create policy "itens_select_admin_supervisor" on public.itens
-for select using ((public.is_admin() or public.is_supervisor_active()) and deleted_at is null);
+for select using (
+  deleted_at is null
+  and (
+    public.is_admin()
+    or public.is_supervisor_active()
+    or exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid()
+        and p.ativo = true
+        and p.role = 'leitor'
+        and p.localizacao_id is not null
+        and p.localizacao_id = itens.localizacao_id
+    )
+  )
+);
 
 create policy "itens_insert_admin_supervisor" on public.itens
 for insert with check (

@@ -17,7 +17,7 @@ function itemEstimatedTotal(item) {
 }
 
 export default function Items() {
-  const { user, isAdmin, profile } = useAuth()
+  const { user, isAdmin, isSupervisor, isLeitor, profile } = useAuth()
   const [items, setItems] = useState([])
   const [filters, setFilters] = useState({ q: '', status: '', categoria: '', localizacao: '' })
   const [loading, setLoading] = useState(true)
@@ -45,6 +45,7 @@ export default function Items() {
         item.modelo,
         item.patrimonio,
         item.codigo_barras,
+        item.numero_serie,
         item.responsavel_atual,
         item.setor,
         item.time,
@@ -67,7 +68,8 @@ export default function Items() {
 
   const categorias = [...new Set(items.map(i => i.categorias?.nome).filter(Boolean))]
   const localizacoes = [...new Set(items.map(i => i.localizacoes?.nome).filter(Boolean))]
-  const canExport = isAdmin || profile?.supervisor_pode_exportar
+  const canCreate = isAdmin || isSupervisor
+  const canExport = isAdmin || (isSupervisor && profile?.supervisor_pode_exportar)
 
   async function handleImportCSV(event) {
     const file = event.target.files?.[0]
@@ -89,7 +91,7 @@ export default function Items() {
         supabase.from('categorias').select('id,nome').eq('ativo', true),
         supabase.from('marcas').select('id,nome').eq('ativo', true),
         supabase.from('localizacoes').select('id,nome').eq('ativo', true),
-        supabase.from('itens').select('patrimonio,codigo_barras').is('deleted_at', null)
+        supabase.from('itens').select('patrimonio,codigo_barras,numero_serie').is('deleted_at', null)
       ])
 
       if (categoriasRes.error) throw categoriasRes.error
@@ -111,6 +113,7 @@ export default function Items() {
         const marcaNome = getCSVValue(row, ['marca'])
         const patrimonio = getCSVValue(row, ['patrimonio', 'número de patrimônio', 'numero de patrimonio'])
         const codigo_barras = getCSVValue(row, ['codigo_barras', 'código de barras', 'codigo de barras'])
+        const numero_serie = getCSVValue(row, ['numero_serie', 'número de série', 'numero de serie', 'serial', 'serie'])
         const categoriaNome = getCSVValue(row, ['categoria'])
         const localizacaoNome = getCSVValue(row, ['localizacao', 'localização'])
         const setor = getCSVValue(row, ['setor'])
@@ -147,6 +150,7 @@ export default function Items() {
           marca_id,
           patrimonio,
           codigo_barras: codigo_barras || null,
+          numero_serie: numero_serie || null,
           categoria_id: categoria_id || null,
           localizacao_id: localizacao_id || null,
           setor: setor || null,
@@ -202,12 +206,12 @@ export default function Items() {
   return (
     <section className="page-section">
       <div className="page-header">
-        <div><h1>Itens</h1><p>Consulte, filtre, importe e exporte os ativos patrimoniais do Grupo 3RN.</p></div>
-        <Link className="btn primary" to="/itens/novo"><PlusCircle size={18} /> Novo item</Link>
+        <div><h1>Itens</h1><p>{isLeitor ? 'Consulte os ativos patrimoniais da sua localização.' : 'Consulte, filtre, importe e exporte os ativos patrimoniais do Grupo 3RN.'}</p></div>
+        {canCreate && <Link className="btn primary" to="/itens/novo"><PlusCircle size={18} /> Novo item</Link>}
       </div>
 
       <div className="filters-card">
-        <div className="search-field"><Search size={18} /><input placeholder="Buscar por modelo, marca, patrimônio, código, setor ou time..." value={filters.q} onChange={e => setFilters({ ...filters, q: e.target.value })} /></div>
+        <div className="search-field"><Search size={18} /><input placeholder="Buscar por modelo, marca, patrimônio, nº série, código, setor ou time..." value={filters.q} onChange={e => setFilters({ ...filters, q: e.target.value })} /></div>
         <select value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}>
           <option value="">Todos os status</option>
           <option value="disponivel">Disponível</option>
@@ -240,39 +244,47 @@ export default function Items() {
       </div>
 
       <div className="export-actions">
-        <label className={`btn primary ${importing ? 'disabled' : ''}`}>
-          <Upload size={17} /> {importing ? 'Importando...' : 'Importar CSV'}
-          <input type="file" accept=".csv,text/csv" hidden onChange={handleImportCSV} disabled={importing} />
-        </label>
-        <button className="btn secondary" type="button" onClick={downloadCSVTemplate}><FileDown size={17} /> Baixar modelo CSV</button>
-        <button className="btn secondary" disabled={!canExport} onClick={() => exportCSV(filteredItems, user.id, filters)}><Download size={17} /> Exportar CSV</button>
-        <button className="btn secondary" disabled={!canExport} onClick={() => exportPDF(filteredItems, user.id, filters)}><FileText size={17} /> Exportar PDF</button>
-        {!canExport && <small>Exportação desabilitada para supervisor.</small>}
+        {canCreate && (
+          <>
+            <label className={`btn primary ${importing ? 'disabled' : ''}`}>
+              <Upload size={17} /> {importing ? 'Importando...' : 'Importar CSV'}
+              <input type="file" accept=".csv,text/csv" hidden onChange={handleImportCSV} disabled={importing} />
+            </label>
+            <button className="btn secondary" type="button" onClick={downloadCSVTemplate}><FileDown size={17} /> Baixar modelo CSV</button>
+          </>
+        )}
+        {!isLeitor && <button className="btn secondary" disabled={!canExport} onClick={() => exportCSV(filteredItems, user.id, filters)}><Download size={17} /> Exportar CSV</button>}
+        {!isLeitor && <button className="btn secondary" disabled={!canExport} onClick={() => exportPDF(filteredItems, user.id, filters)}><FileText size={17} /> Exportar PDF</button>}
+        {!canExport && !isLeitor && <small>Exportação desabilitada para supervisor.</small>}
+        {isLeitor && <small>Perfil leitor: acesso somente para consulta dos itens da sua localização.</small>}
       </div>
 
-      <div className="import-help">
-        <strong>Importação CSV:</strong> obrigatórios apenas <code>modelo</code>, <code>marca</code> e <code>patrimonio</code>. Também pode importar <code>setor</code>, <code>time</code> e <code>valor_estimado</code>. As demais colunas são opcionais.
-      </div>
+      {canCreate && <div className="import-help">
+        <strong>Importação CSV:</strong> obrigatórios apenas <code>modelo</code>, <code>marca</code> e <code>patrimonio</code>. Também pode importar <code>numero_serie</code>, <code>setor</code>, <code>time</code> e <code>valor_estimado</code>. As demais colunas são opcionais.
+      </div>}
 
       <div className="panel">
         {loading ? <p>Carregando...</p> : (
           <div className="responsive-table">
             <table>
-              <thead><tr><th>Modelo</th><th>Marca</th><th>Patrimônio</th><th>Setor</th><th>Time</th><th>Status</th><th>Valor estimado</th><th>Ações</th></tr></thead>
+              <thead><tr><th>Modelo</th><th>Marca</th><th>Patrimônio</th><th>Nº Série</th><th>Setor</th><th>Time</th><th>Status</th><th>Valor estimado</th>{isAdmin && <th>Ações</th>}</tr></thead>
               <tbody>
                 {filteredItems.map(item => (
                   <tr key={item.id}>
                     <td data-label="Modelo">{item.modelo}</td>
                     <td data-label="Marca">{item.marcas?.nome}</td>
                     <td data-label="Patrimônio">{item.patrimonio}</td>
+                    <td data-label="Nº Série">{item.numero_serie || '-'}</td>
                     <td data-label="Setor">{item.setor || '-'}</td>
                     <td data-label="Time">{item.time || '-'}</td>
                     <td data-label="Status"><span className={`badge ${item.status}`}>{item.status}</span></td>
                     <td data-label="Valor estimado">{formatCurrency(itemEstimatedTotal(item))}</td>
-                    <td data-label="Ações" className="actions-cell">
-                      {isAdmin && <Link className="icon-btn" to={`/itens/${item.id}/editar`}><Edit size={16} /></Link>}
-                      {isAdmin && <button className="icon-btn danger" onClick={() => softDelete(item)}><Trash2 size={16} /></button>}
-                    </td>
+                    {isAdmin && (
+                      <td data-label="Ações" className="actions-cell">
+                        <Link className="icon-btn" to={`/itens/${item.id}/editar`}><Edit size={16} /></Link>
+                        <button className="icon-btn danger" onClick={() => softDelete(item)}><Trash2 size={16} /></button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

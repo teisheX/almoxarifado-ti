@@ -1,3 +1,2 @@
-modelo;marca;patrimonio;codigo_barras;setor;time;categoria;status;quantidade;localizacao;tipo;responsavel_atual;observacoes;fornecedor;data_aquisicao;valor_estimado;garantia_ate
-Notebook Latitude 3420;Dell;PAT-0001;789000000001;TI;Suporte;Notebook;disponivel;1;Almoxarifado TI;Notebook;;Item importado via CSV;Fornecedor Exemplo;2026-07-20;3500.00;2027-07-20
-Mouse Sem Fio M185;Logitech;PAT-0002;;Administração;Atendimento;Periférico;disponivel;5;Almoxarifado TI;Mouse;;Itens em estoque;;;80.00;
+modelo;marca;patrimonio;numero_serie;codigo_barras;setor;time;categoria;status;quantidade;localizacao;tipo;responsavel_atual;observacoes;fornecedor;data_aquisicao;valor_estimado;garantia_ate
+Notebook Latitude 3420;Dell;PAT-0001;SN-2026-0001;789000000001;TI;Suporte;Notebook;disponivel;1;Almoxarifado TI;Notebook;;Item importado via CSV;Fornecedor Exemplo;2026-07-20;3500.00;2027-07-20

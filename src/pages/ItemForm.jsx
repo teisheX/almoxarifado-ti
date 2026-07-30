@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import BarcodeScanner from '../components/BarcodeScanner'
 
 const initialForm = {
-  modelo: '', marca_id: '', patrimonio: '', codigo_barras: '', categoria_id: '', tipo: '', status: 'disponivel', quantidade: 1,
+  modelo: '', marca_id: '', patrimonio: '', numero_serie: '', codigo_barras: '', categoria_id: '', tipo: '', status: 'disponivel', quantidade: 1,
   localizacao_id: '', setor: '', time: '', responsavel_atual: '', observacoes: '', data_aquisicao: '', valor_estimado: '', fornecedor: '', garantia_ate: ''
 }
 
@@ -75,6 +75,7 @@ export default function ItemForm() {
         ...form,
         modelo: form.modelo.trim(),
         patrimonio: form.patrimonio.trim(),
+        numero_serie: form.numero_serie.trim() || null,
         codigo_barras: form.codigo_barras.trim() || null,
         categoria_id: form.categoria_id || null,
         localizacao_id: form.localizacao_id || null,
@@ -112,6 +113,7 @@ export default function ItemForm() {
         <Input label="Nome do item / Modelo *" value={form.modelo} onChange={v => update('modelo', v)} required />
         <Select label="Marca *" value={form.marca_id} onChange={v => update('marca_id', v)} options={refs.marcas} required />
         <Input label="Patrimônio *" value={form.patrimonio} onChange={v => update('patrimonio', v)} required />
+        <Input label="Número de série" value={form.numero_serie} onChange={v => update('numero_serie', v)} placeholder="Ex.: SN123456789, ABC-2026-001" />
         <Input label="Setor" value={form.setor} onChange={v => update('setor', v)} placeholder="Ex.: Financeiro, Operações, Administração" />
         <Input label="Time" value={form.time} onChange={v => update('time', v)} placeholder="Ex.: Suporte, Infraestrutura, Administrativo" />
         <div className="field">
