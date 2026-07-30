@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import Layout from './components/Layout'
 import Login from './pages/Login'
@@ -11,9 +11,10 @@ import Logs from './pages/Logs'
 
 function ProtectedRoute({ children, adminOnly = false, createOnly = false }) {
   const { loading, profile } = useAuth()
+  const location = useLocation()
 
   if (loading) return <div className="loading-page">Carregando...</div>
-  if (!profile) return <Navigate to="/login" replace />
+  if (!profile) return <Navigate to="/login" replace state={{ from: location }} />
   if (!profile.ativo) return <div className="loading-page">Usuário desativado. Contate o administrador.</div>
   if (adminOnly && profile.role !== 'admin') return <Navigate to="/" replace />
   if (createOnly && !['admin', 'supervisor'].includes(profile.role)) return <Navigate to="/itens" replace />

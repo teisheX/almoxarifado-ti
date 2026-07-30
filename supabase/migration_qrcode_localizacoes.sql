@@ -1,0 +1,4 @@
+-- Não há alteração obrigatória de banco para o QR Code de localizações.
+-- O QR usa o id existente da tabela public.localizacoes para abrir a rota:
+-- /#/itens?localizacao_id=<id_da_localizacao>
+-- Mantenha RLS de itens/profiles ativa para garantir que leitores vejam somente a localização vinculada.

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Download, Edit, FileText, PlusCircle, Search, Trash2, Upload, FileDown, WalletCards } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { exportCSV, exportPDF } from '../lib/exporters'
@@ -19,7 +19,8 @@ function itemEstimatedTotal(item) {
 export default function Items() {
   const { user, isAdmin, isSupervisor, isLeitor, profile } = useAuth()
   const [items, setItems] = useState([])
-  const [filters, setFilters] = useState({ q: '', status: '', categoria: '', localizacao: '' })
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [filters, setFilters] = useState({ q: '', status: '', categoria: '', localizacaoId: searchParams.get('localizacao_id') || '' })
   const [loading, setLoading] = useState(true)
   const [importing, setImporting] = useState(false)
 
@@ -38,6 +39,11 @@ export default function Items() {
 
   useEffect(() => { loadItems() }, [])
 
+  useEffect(() => {
+    const localizacaoId = searchParams.get('localizacao_id') || ''
+    setFilters(prev => prev.localizacaoId === localizacaoId ? prev : { ...prev, localizacaoId })
+  }, [searchParams])
+
   const filteredItems = useMemo(() => {
     const q = filters.q.toLowerCase().trim()
     return items.filter(item => {
@@ -53,7 +59,7 @@ export default function Items() {
       ].some(v => String(v || '').toLowerCase().includes(q))
       const statusMatch = !filters.status || item.status === filters.status
       const categoriaMatch = !filters.categoria || item.categorias?.nome === filters.categoria
-      const localizacaoMatch = !filters.localizacao || item.localizacoes?.nome === filters.localizacao
+      const localizacaoMatch = !filters.localizacaoId || item.localizacao_id === filters.localizacaoId
       return textMatch && statusMatch && categoriaMatch && localizacaoMatch
     })
   }, [items, filters])
@@ -67,7 +73,13 @@ export default function Items() {
   }, [filteredItems])
 
   const categorias = [...new Set(items.map(i => i.categorias?.nome).filter(Boolean))]
-  const localizacoes = [...new Set(items.map(i => i.localizacoes?.nome).filter(Boolean))]
+  const localizacoes = useMemo(() => {
+    const map = new Map()
+    items.forEach(item => {
+      if (item.localizacao_id && item.localizacoes?.nome) map.set(item.localizacao_id, item.localizacoes.nome)
+    })
+    return [...map.entries()].map(([id, nome]) => ({ id, nome })).sort((a, b) => a.nome.localeCompare(b.nome))
+  }, [items])
   const canCreate = isAdmin || isSupervisor
   const canExport = isAdmin || (isSupervisor && profile?.supervisor_pode_exportar)
 
@@ -222,10 +234,25 @@ export default function Items() {
         <select value={filters.categoria} onChange={e => setFilters({ ...filters, categoria: e.target.value })}>
           <option value="">Todas categorias</option>{categorias.map(c => <option key={c}>{c}</option>)}
         </select>
-        <select value={filters.localizacao} onChange={e => setFilters({ ...filters, localizacao: e.target.value })}>
-          <option value="">Todas localizações</option>{localizacoes.map(l => <option key={l}>{l}</option>)}
+        <select value={filters.localizacaoId} onChange={e => {
+          const localizacaoId = e.target.value
+          setFilters({ ...filters, localizacaoId })
+          if (localizacaoId) setSearchParams({ localizacao_id: localizacaoId })
+          else setSearchParams({})
+        }}>
+          <option value="">Todas localizações</option>{localizacoes.map(l => <option key={l.id} value={l.id}>{l.nome}</option>)}
         </select>
       </div>
+
+      {filters.localizacaoId && (
+        <div className="qr-filter-notice">
+          <div>
+            <strong>Filtro por QR Code ativo</strong>
+            <span>Mostrando somente itens da localização: {localizacoes.find(l => l.id === filters.localizacaoId)?.nome || 'localização selecionada'}.</span>
+          </div>
+          <button className="btn secondary" type="button" onClick={() => { setFilters({ ...filters, localizacaoId: '' }); setSearchParams({}) }}>Limpar filtro</button>
+        </div>
+      )}
 
       <div className="summary-strip">
         <div className="summary-card">

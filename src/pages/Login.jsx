@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { Boxes, ShieldCheck, ScanLine, FileText } from 'lucide-react'
 import loginHero from '../assets/images/login-seguro-ti.png'
 import logo3rn from '../assets/images/grupo-3rn-logo.png'
@@ -8,12 +8,16 @@ import { supabase } from '../lib/supabase'
 
 export default function Login() {
   const { login, profile } = useAuth()
+  const location = useLocation()
+  const from = location.state?.from?.pathname
+    ? `${location.state.from.pathname}${location.state.from.search || ''}`
+    : '/'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
-  if (profile) return <Navigate to="/" replace />
+  if (profile) return <Navigate to={from} replace />
 
   async function handleSubmit(e) {
     e.preventDefault()

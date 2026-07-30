@@ -168,3 +168,33 @@ Para usar em banco já existente, rode no Supabase SQL Editor:
 ```
 
 Depois acesse **Gestão de usuários**, altere o usuário para `Leitor` e selecione a **Localização do leitor**.
+
+## Criar usuários pelo painel do administrador
+
+A tela **Usuários** possui um formulário para criar usuário diretamente pelo painel ADM.
+
+Como o projeto roda no GitHub Pages, a criação segura do usuário no Supabase Auth é feita por uma Supabase Edge Function em:
+
+```text
+supabase/functions/create-user/index.ts
+```
+
+Para configurar, leia:
+
+```text
+supabase/INSTRUCOES_EDGE_FUNCTION_CRIAR_USUARIO.md
+```
+
+Atenção: a chave `service_role` deve ficar somente nas secrets da Edge Function. Nunca coloque essa chave no frontend, `.env` público ou GitHub.
+
+## QR Code de localizações
+
+A aba **Cadastros > Localizações** possui o botão **Gerar QR**. O QR Code gerado abre o sistema direto na aba **Itens** com o filtro da localização selecionada.
+
+Formato do link gerado:
+
+```text
+https://teisheX.github.io/almoxarifado-ti/#/itens?localizacao_id=ID_DA_LOCALIZACAO
+```
+
+Se o usuário não estiver autenticado, ele será levado para o login e, após entrar, retornará para a listagem filtrada. Usuários com perfil **Leitor** continuam limitados pelas políticas RLS e só visualizam itens da localização vinculada ao perfil.
