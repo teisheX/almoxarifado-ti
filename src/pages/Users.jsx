@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Trash2, UserPlus } from 'lucide-react'
+import { Pencil, Save, Trash2, UserPlus, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const initialNewUser = {
@@ -17,6 +17,8 @@ export default function Users() {
   const [newUser, setNewUser] = useState(initialNewUser)
   const [creating, setCreating] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+  const [editingUser, setEditingUser] = useState(null)
+  const [savingEdit, setSavingEdit] = useState(false)
   const [message, setMessage] = useState('')
 
   async function load() {
@@ -40,6 +42,68 @@ export default function Users() {
 
   function updateNewUser(field, value) {
     setNewUser(prev => ({ ...prev, [field]: value }))
+  }
+
+
+  function openEditUser(user) {
+    setMessage('')
+    setEditingUser({
+      id: user.id,
+      nome: user.nome || '',
+      email: user.email || '',
+      password: '',
+      role: user.role || 'leitor',
+      ativo: user.ativo !== false,
+      localizacao_id: user.localizacao_id || '',
+      supervisor_pode_exportar: Boolean(user.supervisor_pode_exportar)
+    })
+  }
+
+  function updateEditingUser(field, value) {
+    setEditingUser(prev => {
+      const next = { ...prev, [field]: value }
+      if (field === 'role' && value !== 'leitor') next.localizacao_id = ''
+      if (field === 'role' && value !== 'supervisor') next.supervisor_pode_exportar = false
+      return next
+    })
+  }
+
+  async function saveEditingUser(e) {
+    e.preventDefault()
+    if (!editingUser) return
+    setMessage('')
+
+    if (!editingUser.nome.trim()) return setMessage('Informe o nome do usuário.')
+    if (!editingUser.email.trim()) return setMessage('Informe o e-mail do usuário.')
+    if (editingUser.password && editingUser.password.length < 6) return setMessage('A nova senha precisa ter pelo menos 6 caracteres.')
+    if (editingUser.role === 'leitor' && !editingUser.localizacao_id) return setMessage('Para usuário leitor, selecione a localização que ele poderá visualizar.')
+
+    setSavingEdit(true)
+    try {
+      const payload = {
+        user_id: editingUser.id,
+        nome: editingUser.nome.trim(),
+        email: editingUser.email.trim().toLowerCase(),
+        password: editingUser.password || undefined,
+        role: editingUser.role,
+        ativo: Boolean(editingUser.ativo),
+        localizacao_id: editingUser.role === 'leitor' ? editingUser.localizacao_id : null,
+        supervisor_pode_exportar: editingUser.role === 'supervisor' ? Boolean(editingUser.supervisor_pode_exportar) : false
+      }
+
+      const { data, error } = await supabase.functions.invoke('update-user', { body: payload })
+
+      if (error) throw error
+      if (data?.error) throw new Error(data.error)
+
+      setMessage('Usuário atualizado com sucesso.')
+      setEditingUser(null)
+      await load()
+    } catch (error) {
+      setMessage(error.message || 'Não foi possível atualizar o usuário. Confira se a Edge Function update-user foi publicada no Supabase.')
+    } finally {
+      setSavingEdit(false)
+    }
   }
 
   async function createUser(e) {
@@ -273,15 +337,25 @@ export default function Users() {
                   />
                 </td>
                 <td data-label="Ações">
-                  <button
-                    type="button"
-                    className="icon-btn danger"
-                    title="Excluir usuário"
-                    disabled={deletingId === u.id}
-                    onClick={() => deleteUser(u)}
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div className="actions-cell">
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      title="Editar usuário"
+                      onClick={() => openEditUser(u)}
+                    >
+                      <Pencil size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-btn danger"
+                      title="Excluir usuário"
+                      disabled={deletingId === u.id}
+                      onClick={() => deleteUser(u)}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -289,8 +363,106 @@ export default function Users() {
         </table>
       </div>
 
+      {editingUser && (
+        <div className="modal-backdrop">
+          <form className="modal-card user-edit-modal" onSubmit={saveEditingUser}>
+            <div className="panel-title-row">
+              <div>
+                <h2>Editar usuário</h2>
+                <p>Atualize nome, e-mail, senha, perfil, status e localização do leitor.</p>
+              </div>
+              <button type="button" className="icon-btn" onClick={() => setEditingUser(null)} title="Fechar">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="form-grid user-create-grid">
+              <label className="field">
+                <span>Nome</span>
+                <input
+                  value={editingUser.nome}
+                  onChange={e => updateEditingUser('nome', e.target.value)}
+                />
+              </label>
+
+              <label className="field">
+                <span>E-mail</span>
+                <input
+                  type="email"
+                  value={editingUser.email}
+                  onChange={e => updateEditingUser('email', e.target.value)}
+                />
+              </label>
+
+              <label className="field">
+                <span>Nova senha</span>
+                <input
+                  type="password"
+                  value={editingUser.password}
+                  onChange={e => updateEditingUser('password', e.target.value)}
+                  placeholder="Deixe vazio para não alterar"
+                />
+                <small>Preencha somente se quiser trocar a senha.</small>
+              </label>
+
+              <label className="field">
+                <span>Perfil</span>
+                <select value={editingUser.role} onChange={e => updateEditingUser('role', e.target.value)}>
+                  <option value="admin">Admin</option>
+                  <option value="supervisor">Supervisor</option>
+                  <option value="leitor">Leitor</option>
+                </select>
+              </label>
+
+              <label className="field">
+                <span>Localização do leitor</span>
+                <select
+                  value={editingUser.localizacao_id}
+                  disabled={editingUser.role !== 'leitor'}
+                  onChange={e => updateEditingUser('localizacao_id', e.target.value)}
+                >
+                  <option value="">Selecione uma localização</option>
+                  {localizacoes.map(local => (
+                    <option key={local.id} value={local.id}>{local.nome}</option>
+                  ))}
+                </select>
+                <small>Obrigatório somente para o perfil leitor.</small>
+              </label>
+
+              <label className="field checkbox-field">
+                <span>Usuário ativo</span>
+                <input
+                  type="checkbox"
+                  checked={editingUser.ativo}
+                  onChange={e => updateEditingUser('ativo', e.target.checked)}
+                />
+              </label>
+
+              <label className="field checkbox-field">
+                <span>Supervisor pode exportar</span>
+                <input
+                  type="checkbox"
+                  checked={editingUser.supervisor_pode_exportar}
+                  disabled={editingUser.role !== 'supervisor'}
+                  onChange={e => updateEditingUser('supervisor_pode_exportar', e.target.checked)}
+                />
+              </label>
+            </div>
+
+            <div className="form-actions full modal-actions">
+              <button className="btn secondary" type="button" onClick={() => setEditingUser(null)}>
+                <X size={18} /> Cancelar
+              </button>
+              <button className="btn primary" type="submit" disabled={savingEdit}>
+                <Save size={18} /> {savingEdit ? 'Salvando...' : 'Salvar alterações'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       <div className="hint-card">
-        Para criar usuário pelo painel, publique a Edge Function <strong>create-user</strong> no Supabase e publique as Edge Functions <strong>create-user</strong> e <strong>delete-user</strong>. O perfil Leitor visualiza somente itens da localização vinculada e não pode criar, editar, excluir, importar ou exportar.
+        Para gerenciar usuários pelo painel, publique as Edge Functions <strong>create-user</strong>, <strong>update-user</strong> e <strong>delete-user</strong>. O perfil Leitor visualiza somente itens da localização vinculada e não pode criar, editar, excluir, importar ou exportar.
       </div>
     </section>
   )

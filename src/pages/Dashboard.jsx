@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Dashboard() {
-  const { isAdmin, isLeitor, profile } = useAuth()
+  const { isAdmin, isLeitor, profile, user } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -26,6 +26,8 @@ export default function Dashboard() {
   }, [])
 
   const total = items.length
+  const displayName = profile?.nome || user?.email?.split('@')?.[0] || 'usuário'
+  const firstName = displayName.split(' ')[0]
   const disponiveis = items.filter(i => i.status === 'disponivel').length
   const uso = items.filter(i => i.status === 'em_uso').length
   const manutencao = items.filter(i => i.status === 'manutencao').length
@@ -35,8 +37,8 @@ export default function Dashboard() {
       <div className="dashboard-hero">
         <div className="dashboard-hero-copy">
           <span className="eyebrow">Controle corporativo de ativos</span>
-          <h1>{isAdmin ? 'Dashboard do Administrador' : isLeitor ? 'Dashboard do Leitor' : 'Dashboard do Supervisor'}</h1>
-          <p>{isLeitor ? 'Consulte os ativos patrimoniais disponíveis para a sua localização vinculada.' : 'Resumo visual dos ativos patrimoniais do Grupo 3RN, com itens, patrimônio, setores, times, relatórios e rastreamento por código de barras.'}</p>
+          <h1>{`Dashboard de ${firstName}`}</h1>
+          <p>{isLeitor ? `Olá, ${displayName}. Consulte os ativos patrimoniais disponíveis para a sua localização vinculada.` : `Olá, ${displayName}. Acompanhe os ativos patrimoniais do Grupo 3RN, com itens, patrimônio, setores, times, relatórios e rastreamento por código de barras.`}</p>
           <div className="hero-actions">
             {!isLeitor && <Link className="btn primary" to="/itens/novo"><PlusCircle size={18} /> Novo item</Link>}
             <Link className="btn secondary" to="/itens"><ScanLine size={18} /> Consultar itens</Link>

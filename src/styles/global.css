@@ -570,3 +570,21 @@ textarea { min-height: 110px; resize: vertical; }
     justify-self: center;
   }
 }
+
+
+.user-edit-modal {
+  width: min(100%, 860px);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.panel-title-row button.icon-btn {
+  flex-shrink: 0;
+}
