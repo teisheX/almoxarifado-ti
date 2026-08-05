@@ -8,6 +8,7 @@ import ItemForm from './pages/ItemForm'
 import Users from './pages/Users'
 import Settings from './pages/Settings'
 import Logs from './pages/Logs'
+import Terms from './pages/Terms'
 
 function ProtectedRoute({ children, adminOnly = false, createOnly = false }) {
   const { loading, profile } = useAuth()
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="itens/novo" element={<ProtectedRoute createOnly><ItemForm /></ProtectedRoute>} />
         <Route path="itens/:id/editar" element={<ProtectedRoute adminOnly><ItemForm /></ProtectedRoute>} />
         <Route path="usuarios" element={<ProtectedRoute adminOnly><Users /></ProtectedRoute>} />
+        <Route path="termos" element={<ProtectedRoute createOnly><Terms /></ProtectedRoute>} />
         <Route path="configuracoes" element={<ProtectedRoute adminOnly><Settings /></ProtectedRoute>} />
         <Route path="logs" element={<ProtectedRoute adminOnly><Logs /></ProtectedRoute>} />
       </Route>

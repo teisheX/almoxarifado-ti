@@ -1,0 +1,7 @@
+project_id = "kvsbgmkxjrtxulvqbnvd"
+
+[functions.create-zapsign-term]
+verify_jwt = true
+
+[functions.zapsign-webhook]
+verify_jwt = false
