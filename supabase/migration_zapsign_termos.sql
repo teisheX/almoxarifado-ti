@@ -23,6 +23,12 @@ create table if not exists public.termos_responsabilidade (
   zapsign_sign_url text,
   pdf_original_url text,
   pdf_assinado_url text,
+  signer_selfie_photo_url text,
+  signer_document_photo_url text,
+  signer_document_verse_photo_url text,
+  signature_image_url text,
+  signer_auth_mode text,
+  signer_signed_at timestamp with time zone,
   local_data text,
   webhook_payload jsonb,
   criado_por uuid references public.profiles(id),
@@ -43,6 +49,39 @@ create table if not exists public.termo_itens (
   localizacao text,
   created_at timestamp with time zone default now()
 );
+
+
+-- Garantias para bancos que já tinham as tabelas criadas antes desta versão.
+alter table public.colaboradores add column if not exists cpf text;
+alter table public.colaboradores add column if not exists email text;
+alter table public.colaboradores add column if not exists telefone text;
+alter table public.colaboradores add column if not exists cargo text;
+alter table public.colaboradores add column if not exists setor text;
+alter table public.colaboradores add column if not exists ativo boolean default true;
+alter table public.colaboradores add column if not exists updated_at timestamp with time zone default now();
+
+alter table public.termos_responsabilidade add column if not exists zapsign_document_token text;
+alter table public.termos_responsabilidade add column if not exists zapsign_signer_token text;
+alter table public.termos_responsabilidade add column if not exists zapsign_sign_url text;
+alter table public.termos_responsabilidade add column if not exists pdf_original_url text;
+alter table public.termos_responsabilidade add column if not exists pdf_assinado_url text;
+alter table public.termos_responsabilidade add column if not exists signer_selfie_photo_url text;
+alter table public.termos_responsabilidade add column if not exists signer_document_photo_url text;
+alter table public.termos_responsabilidade add column if not exists signer_document_verse_photo_url text;
+alter table public.termos_responsabilidade add column if not exists signature_image_url text;
+alter table public.termos_responsabilidade add column if not exists signer_auth_mode text;
+alter table public.termos_responsabilidade add column if not exists signer_signed_at timestamp with time zone;
+alter table public.termos_responsabilidade add column if not exists local_data text;
+alter table public.termos_responsabilidade add column if not exists webhook_payload jsonb;
+alter table public.termos_responsabilidade add column if not exists updated_at timestamp with time zone default now();
+
+alter table public.termo_itens add column if not exists modelo text;
+alter table public.termo_itens add column if not exists marca text;
+alter table public.termo_itens add column if not exists patrimonio text;
+alter table public.termo_itens add column if not exists numero_serie text;
+alter table public.termo_itens add column if not exists setor text;
+alter table public.termo_itens add column if not exists time text;
+alter table public.termo_itens add column if not exists localizacao text;
 
 create index if not exists idx_colaboradores_cpf on public.colaboradores (cpf);
 create index if not exists idx_termos_colaborador_id on public.termos_responsabilidade (colaborador_id);

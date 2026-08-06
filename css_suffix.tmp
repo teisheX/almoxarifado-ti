@@ -1,0 +1,36 @@
+  .login-premium-page {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+  .login-hero-panel,
+  .login-form-panel {
+    min-height: auto;
+  }
+  .login-hero-panel {
+    min-height: 560px;
+  }
+}
+@media (max-width: 720px) {
+  .login-premium-page {
+    padding: 14px;
+    gap: 14px;
+  }
+  .login-hero-panel {
+    min-height: 560px;
+    border-radius: 26px;
+  }
+  .login-hero-content {
+    width: 100%;
+    padding: 24px;
+    justify-content: flex-end;
+  }
+  .login-feature-grid {
+    grid-template-columns: 1fr;
+  }
+  .login-feature-card {
+    min-height: auto;
+  }
+  .login-premium-card {
+    border-radius: 26px;
+  }
+}

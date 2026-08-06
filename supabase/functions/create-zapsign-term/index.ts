@@ -15,11 +15,7 @@ function somenteNumeros(valor: unknown) {
   return String(valor ?? "").replace(/\D/g, "");
 }
 
-function gerarMarkdownTermo(params: {
-  colaborador: any;
-  itens: any[];
-  localData: string;
-}) {
+function gerarMarkdownTermo(params: { colaborador: any; itens: any[]; localData: string }) {
   const { colaborador, itens, localData } = params;
 
   const listaEquipamentos = itens
@@ -31,19 +27,9 @@ function gerarMarkdownTermo(params: {
       const time = limparTexto(item.time || "");
 
       let linha = `- ${modelo} | Patrimônio: ${patrimonio}`;
-
-      if (serie) {
-        linha += ` | Nº Série: ${serie}`;
-      }
-
-      if (setor) {
-        linha += ` | Setor: ${setor}`;
-      }
-
-      if (time) {
-        linha += ` | Time: ${time}`;
-      }
-
+      if (serie) linha += ` | Nº Série: ${serie}`;
+      if (setor) linha += ` | Setor: ${setor}`;
+      if (time) linha += ` | Time: ${time}`;
       return linha;
     })
     .join("\n");
@@ -121,55 +107,27 @@ d) No desligamento da EMPRESA, independentemente do motivo.
 `;
 }
 
-function gerarLinkWhatsapp(params: {
-  nome: string;
-  telefone: string;
-  signUrl: string;
-}) {
+function gerarLinkWhatsapp(params: { nome: string; telefone: string; signUrl: string }) {
   const nome = limparTexto(params.nome);
   let telefone = somenteNumeros(params.telefone);
+  if (!telefone || !params.signUrl) return null;
+  if (!telefone.startsWith("55")) telefone = `55${telefone}`;
 
-  if (!telefone) {
-    return null;
-  }
-
-  if (!telefone.startsWith("55")) {
-    telefone = `55${telefone}`;
-  }
-
-  const mensagem = `Olá, ${nome}.
-
-Segue o Termo de Responsabilidade dos equipamentos do Grupo 3RN para assinatura:
-
-${params.signUrl}
-
-Após assinar, o sistema atualizará o status automaticamente.`;
-
+  const mensagem = `Olá, ${nome}.\n\nSegue o Termo de Responsabilidade dos equipamentos do Grupo 3RN para assinatura:\n\n${params.signUrl}\n\nApós assinar, o sistema atualizará o status automaticamente.`;
   return `https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`;
 }
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      status: 200,
-      headers: corsHeaders,
-    });
+    return new Response("ok", { status: 200, headers: corsHeaders });
   }
 
   try {
     if (req.method !== "POST") {
-      return new Response(
-        JSON.stringify({
-          error: "Método não permitido. Use POST.",
-        }),
-        {
-          status: 405,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Método não permitido. Use POST." }), {
+        status: 405,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -180,72 +138,35 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           error: "Secrets ausentes.",
-          details:
-            "Confira se SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY e ZAPSIGN_API_TOKEN existem nas Edge Functions.",
+          details: "Confira se SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY e ZAPSIGN_API_TOKEN existem nas Edge Functions.",
         }),
-        {
-          status: 500,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     const authHeader = req.headers.get("Authorization");
-
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({
-          error: "Usuário não autenticado.",
-        }),
-        {
-          status: 401,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Usuário não autenticado." }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
+      auth: { autoRefreshToken: false, persistSession: false },
     });
 
     const userClient = createClient(supabaseUrl, serviceRoleKey, {
-      global: {
-        headers: {
-          Authorization: authHeader,
-        },
-      },
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
+      global: { headers: { Authorization: authHeader } },
+      auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const { data: requesterData, error: requesterError } =
-      await userClient.auth.getUser();
-
+    const { data: requesterData, error: requesterError } = await userClient.auth.getUser();
     if (requesterError || !requesterData?.user) {
-      return new Response(
-        JSON.stringify({
-          error: "Usuário inválido.",
-          details: requesterError?.message || null,
-        }),
-        {
-          status: 401,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Usuário inválido.", details: requesterError?.message || null }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const requesterId = requesterData.user.id;
@@ -257,285 +178,170 @@ serve(async (req) => {
       .single();
 
     if (profileError || !profile) {
-      return new Response(
-        JSON.stringify({
-          error: "Perfil do usuário não encontrado.",
-          details: profileError?.message || null,
-        }),
-        {
-          status: 403,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Perfil do usuário não encontrado.", details: profileError?.message || null }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (!profile.ativo || !["admin", "supervisor"].includes(profile.role)) {
-      return new Response(
-        JSON.stringify({
-          error: "Apenas admin ou supervisor podem gerar termo.",
-        }),
-        {
-          status: 403,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Apenas admin ou supervisor podem gerar termo." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const body = await req.json();
-
     const colaborador = body?.colaborador;
     const itemIds = body?.item_ids;
     const localDataInformada = body?.local_data;
 
-    if (!colaborador?.nome) {
-      return new Response(
-        JSON.stringify({
-          error: "Nome do colaborador é obrigatório.",
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+    if (!limparTexto(colaborador?.nome)) {
+      return new Response(JSON.stringify({ error: "Nome do colaborador é obrigatório." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    if (!colaborador?.email) {
-      return new Response(
-        JSON.stringify({
-          error: "E-mail do colaborador é obrigatório.",
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+    if (!limparTexto(colaborador?.email)) {
+      return new Response(JSON.stringify({ error: "E-mail do colaborador é obrigatório." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    if (!colaborador?.cpf) {
-      return new Response(
-        JSON.stringify({
-          error: "CPF do colaborador é obrigatório.",
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+    if (!limparTexto(colaborador?.cpf)) {
+      return new Response(JSON.stringify({ error: "CPF do colaborador é obrigatório." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (!Array.isArray(itemIds) || itemIds.length === 0) {
-      return new Response(
-        JSON.stringify({
-          error: "Selecione pelo menos um ativo para gerar o termo.",
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Selecione pelo menos um ativo para gerar o termo." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const cpfLimpo = somenteNumeros(colaborador.cpf);
     const telefoneLimpo = somenteNumeros(colaborador.telefone);
 
     if (cpfLimpo.length < 11) {
-      return new Response(
-        JSON.stringify({
-          error: "CPF inválido.",
-          details: "Informe o CPF com 11 dígitos.",
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      return new Response(JSON.stringify({ error: "CPF inválido.", details: "Informe o CPF com 11 dígitos." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const { data: itens, error: itensError } = await adminClient
       .from("itens")
-      .select(`
-        id,
-        modelo,
-        patrimonio,
-        numero_serie,
-        setor,
-        time
-      `)
-      .in("id", itemIds);
+      .select("id, modelo, patrimonio, numero_serie, setor, time")
+      .in("id", itemIds)
+      .is("deleted_at", null);
 
     if (itensError) {
-      return new Response(
-        JSON.stringify({
-          error: "Erro ao buscar os ativos no banco.",
-          details: itensError.message,
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Erro ao buscar os ativos no banco.", details: itensError.message }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (!itens || itens.length === 0) {
-      return new Response(
-        JSON.stringify({
-          error: "Nenhum ativo encontrado para gerar o termo.",
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Nenhum ativo encontrado para gerar o termo." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     let colaboradorData: any = null;
 
-    const { data: colaboradorExistente, error: buscaColaboradorError } =
-      await adminClient
-        .from("colaboradores")
-        .select("*")
-        .eq("cpf", cpfLimpo)
-        .maybeSingle();
+    const { data: colaboradorExistente, error: buscaColaboradorError } = await adminClient
+      .from("colaboradores")
+      .select("*")
+      .eq("cpf", cpfLimpo)
+      .maybeSingle();
 
     if (buscaColaboradorError) {
-      return new Response(
-        JSON.stringify({
-          error: "Erro ao consultar colaborador.",
-          details: buscaColaboradorError.message,
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Erro ao consultar colaborador.", details: buscaColaboradorError.message }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
+
+    const colaboradorPayload = {
+      nome: limparTexto(colaborador.nome),
+      cpf: cpfLimpo,
+      email: limparTexto(colaborador.email).toLowerCase(),
+      telefone: telefoneLimpo || null,
+      cargo: limparTexto(colaborador.cargo) || null,
+      setor: limparTexto(colaborador.setor) || null,
+      ativo: true,
+      updated_at: new Date().toISOString(),
+    };
 
     if (colaboradorExistente) {
       const { data, error } = await adminClient
         .from("colaboradores")
-        .update({
-          nome: limparTexto(colaborador.nome),
-          cpf: cpfLimpo,
-          email: limparTexto(colaborador.email),
-          telefone: telefoneLimpo || null,
-          cargo: limparTexto(colaborador.cargo) || null,
-          setor: limparTexto(colaborador.setor) || null,
-          ativo: true,
-          updated_at: new Date().toISOString(),
-        })
+        .update(colaboradorPayload)
         .eq("id", colaboradorExistente.id)
         .select()
         .single();
 
       if (error) {
-        return new Response(
-          JSON.stringify({
-            error: "Erro ao atualizar colaborador.",
-            details: error.message,
-          }),
-          {
-            status: 400,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json",
-            },
-          },
-        );
+        return new Response(JSON.stringify({ error: "Erro ao atualizar colaborador.", details: error.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
-
       colaboradorData = data;
     } else {
       const { data, error } = await adminClient
         .from("colaboradores")
-        .insert({
-          nome: limparTexto(colaborador.nome),
-          cpf: cpfLimpo,
-          email: limparTexto(colaborador.email),
-          telefone: telefoneLimpo || null,
-          cargo: limparTexto(colaborador.cargo) || null,
-          setor: limparTexto(colaborador.setor) || null,
-          ativo: true,
-          updated_at: new Date().toISOString(),
-        })
+        .insert(colaboradorPayload)
         .select()
         .single();
 
       if (error) {
-        return new Response(
-          JSON.stringify({
-            error: "Erro ao criar colaborador.",
-            details: error.message,
-          }),
-          {
-            status: 400,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json",
-            },
-          },
-        );
+        return new Response(JSON.stringify({ error: "Erro ao criar colaborador.", details: error.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
-
       colaboradorData = data;
     }
 
-    const localData =
-      limparTexto(localDataInformada) ||
-      `Itaberaí/GO, ${new Date().toLocaleDateString("pt-BR")}`;
-
-    const markdownTermo = gerarMarkdownTermo({
-      colaborador: colaboradorData,
-      itens,
-      localData,
-    });
+    const localData = limparTexto(localDataInformada) || `Itaberaí/GO, ${new Date().toLocaleDateString("pt-BR")}`;
+    const markdownTermo = gerarMarkdownTermo({ colaborador: colaboradorData, itens, localData });
 
     const payloadZapSign = {
       name: `Termo de Responsabilidade - ${colaboradorData.nome}`,
       markdown_text: markdownTermo,
       lang: "pt-br",
 
-      // IMPORTANTE:
-      // sandbox: true permite testar a API sem plano de produção.
-      // Para usar documentos reais em produção, será necessário plano de API da ZapSign.
-      sandbox: true,
-
+      // PRODUÇÃO: não use sandbox aqui.
+      // O documento será criado como válido na ZapSign, desde que o Plano API esteja liberado.
       disable_signer_emails: false,
       signers: [
         {
           name: colaboradorData.nome,
           email: colaboradorData.email,
           cpf: cpfLimpo,
+
+          // Assinatura desenhada na tela.
           auth_mode: "assinaturaTela",
+
+          // Exige CPF no relatório/evidências da assinatura.
+          require_cpf: true,
+
+          // Exige selfie/foto do signatário durante a assinatura.
+          require_selfie_photo: true,
+
+          // Validação avançada opcional da ZapSign.
+          // "none" mantém assinatura + coleta de fotos sem biometria paga/avançada.
+          // Para prova de vida + documento, consulte seu plano e troque para "liveness-document-match".
+          selfie_validation_type: "none",
+
           send_automatic_email: true,
           lock_name: true,
           lock_email: true,
@@ -547,28 +353,22 @@ serve(async (req) => {
       ],
     };
 
-    const zapsignResponse = await fetch(
-      "https://api.zapsign.com.br/api/v1/docs/",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${zapsignToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payloadZapSign),
+    const zapsignResponse = await fetch("https://api.zapsign.com.br/api/v1/docs/", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${zapsignToken}`,
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify(payloadZapSign),
+    });
 
     const zapsignText = await zapsignResponse.text();
-
     let zapsignJson: any = null;
 
     try {
       zapsignJson = JSON.parse(zapsignText);
     } catch (_error) {
-      zapsignJson = {
-        raw_response: zapsignText,
-      };
+      zapsignJson = { raw_response: zapsignText };
     }
 
     if (!zapsignResponse.ok) {
@@ -579,39 +379,18 @@ serve(async (req) => {
           details: zapsignJson,
           payload_enviado: {
             name: payloadZapSign.name,
-            sandbox: payloadZapSign.sandbox,
             markdown_text_length: markdownTermo.length,
             signers: payloadZapSign.signers,
           },
         }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const signer = Array.isArray(zapsignJson.signers)
-      ? zapsignJson.signers[0]
-      : null;
-
-    const signUrl =
-      signer?.sign_url ||
-      signer?.sign_url_short ||
-      signer?.url ||
-      zapsignJson.sign_url ||
-      zapsignJson.sign_url_short ||
-      null;
-
+    const signer = Array.isArray(zapsignJson.signers) ? zapsignJson.signers[0] : null;
+    const signUrl = signer?.sign_url || signer?.sign_url_short || signer?.url || zapsignJson.sign_url || zapsignJson.sign_url_short || null;
     const whatsappUrl = signUrl
-      ? gerarLinkWhatsapp({
-          nome: colaboradorData.nome,
-          telefone: colaboradorData.telefone || telefoneLimpo,
-          signUrl,
-        })
+      ? gerarLinkWhatsapp({ nome: colaboradorData.nome, telefone: colaboradorData.telefone || telefoneLimpo, signUrl })
       : null;
 
     const { data: termoData, error: termoError } = await adminClient
@@ -623,6 +402,7 @@ serve(async (req) => {
         zapsign_signer_token: signer?.token || null,
         zapsign_sign_url: signUrl,
         pdf_original_url: zapsignJson.original_file || null,
+        webhook_payload: zapsignJson,
         local_data: localData,
         criado_por: requesterId,
         updated_at: new Date().toISOString(),
@@ -637,13 +417,7 @@ serve(async (req) => {
           details: termoError.message,
           zapsign: zapsignJson,
         }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -659,26 +433,17 @@ serve(async (req) => {
       localizacao: null,
     }));
 
-    const { error: termoItensError } = await adminClient
-      .from("termo_itens")
-      .insert(termoItens);
+    const { error: termoItensError } = await adminClient.from("termo_itens").insert(termoItens);
 
     if (termoItensError) {
       return new Response(
         JSON.stringify({
-          error:
-            "Documento criado e termo salvo, mas houve erro ao salvar os ativos do termo.",
+          error: "Documento criado e termo salvo, mas houve erro ao salvar os ativos do termo.",
           details: termoItensError.message,
           termo: termoData,
           zapsign: zapsignJson,
         }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -692,43 +457,25 @@ serve(async (req) => {
         email: colaboradorData.email,
         zapsign_document_token: zapsignJson.token || null,
         quantidade_itens: itens.length,
-        sandbox: true,
       },
     });
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Termo criado com sucesso na ZapSign em modo sandbox.",
+        message: "Termo criado com sucesso na ZapSign em produção, com assinatura na tela e selfie.",
         termo: termoData,
         sign_url: signUrl,
         whatsapp_url: whatsappUrl,
-        sandbox: true,
         zapsign: zapsignJson,
       }),
-      {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      },
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
     console.error("ERRO_CREATE_ZAPSIGN_TERM", error);
-
     return new Response(
-      JSON.stringify({
-        error: "Erro interno ao gerar termo.",
-        details: error?.message || String(error),
-      }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      },
+      JSON.stringify({ error: "Erro interno ao gerar termo.", details: error?.message || String(error) }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });

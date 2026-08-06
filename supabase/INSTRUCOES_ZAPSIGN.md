@@ -50,3 +50,17 @@ npm.cmd run deploy
 ```
 
 A aba Termos fica disponível para Admin e Supervisor.
+
+
+## Produção com foto/selfie
+
+Esta versão remove o `sandbox: true` da criação do documento. Os novos termos serão gerados em produção na ZapSign, desde que o seu plano tenha API liberada.
+
+O signatário agora é criado com:
+
+- `auth_mode: "assinaturaTela"`
+- `require_cpf: true`
+- `require_selfie_photo: true`
+- `selfie_validation_type: "none"`
+
+Com isso, o colaborador assina desenhando na tela e a ZapSign solicita selfie durante a assinatura. Não será exigida foto frente e verso do documento. Para validação biométrica avançada, confirme no plano da ZapSign e altere `selfie_validation_type` para `"liveness-document-match"` na Edge Function `create-zapsign-term`.

@@ -1,6 +1,21 @@
-# Sistema de Almoxarifado de TI
+# 3RN Ativos - Sistema de Gestão Patrimonial
 
-Sistema web responsivo para gerenciamento de gestão patrimonial, com React, Vite e Supabase.
+**Versão atual:** 2.0.0
+
+Sistema web responsivo para gestão patrimonial do Grupo 3RN, com controle de ativos, usuários, relatórios, QR Code de localização e integração ZapSign para Termo de Responsabilidade com assinatura na tela, CPF obrigatório e selfie do signatário.
+
+
+
+## Destaques da versão 2.0.0
+
+- Integração ZapSign em produção, sem modo sandbox.
+- Termo de responsabilidade baseado no modelo do Grupo 3RN.
+- Assinatura na tela.
+- CPF obrigatório.
+- Selfie/foto do signatário para validação.
+- Sem exigência de foto frente/verso do documento.
+- Webhook para atualizar status do termo após assinatura.
+- Link gratuito de WhatsApp via `wa.me`.
 
 ## Recursos implementados
 
